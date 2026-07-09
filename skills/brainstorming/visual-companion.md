@@ -57,32 +57,14 @@ without repeating it.
 
 **Note:** Pass the project root as `--project-dir` so mockups persist in `.superpowers/brainstorm/` and survive server restarts. Without it, files go to `/tmp` and get cleaned up. Remind the user to add `.superpowers/` to `.gitignore` if it's not already there.
 
-**Launching the server by platform:**
+**Launching the server from a Codex skill:**
 
-**Claude Code:**
 ```bash
-# Default mode works — the script backgrounds the server itself.
+# Start only after the just-in-time offer is accepted.
 scripts/start-server.sh --project-dir /path/to/project --open
 ```
 
-On Windows, the script auto-detects and switches to foreground mode (which blocks the tool call). Use `run_in_background: true` on the Bash tool call so the server survives across conversation turns, then read `$STATE_DIR/server-info` on the next turn to get the URL and port.
-
-**Codex:**
-```bash
-# Codex reaps background processes. The script auto-detects CODEX_CI and
-# switches to foreground mode. Run it normally — no extra flags needed.
-scripts/start-server.sh --project-dir /path/to/project --open
-```
-
-**Copilot CLI:**
-```bash
-# Use --foreground and start the server via the bash tool with mode: "async"
-# so the process survives across turns. Capture the returned shellId for
-# read_bash / stop_bash if you need to interact with it later.
-scripts/start-server.sh --project-dir /path/to/project --open --foreground
-```
-
-**Other environments:** The server must keep running in the background across conversation turns. If your environment reaps detached processes, use `--foreground` and launch the command with your platform's background execution mechanism.
+Use `exec_command` for launch. Do not add SessionStart hooks, plugin auto-launchers, or other platform launchers for this fork.
 
 If the URL is unreachable from your browser (common in remote/containerized setups), bind a non-loopback host:
 

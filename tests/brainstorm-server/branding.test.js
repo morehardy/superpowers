@@ -312,25 +312,15 @@ async function main() {
     });
   });
 
-  await test('DISABLE_TELEMETRY=true omits remote image for Claude Code telemetry opt-out', async () => {
+  await test('DISABLE_TELEMETRY=true omits remote image for generic telemetry opt-out', async () => {
     const port = 3455;
-    const dir = '/tmp/brainstorm-branding-claude-disable-telemetry';
+    const dir = '/tmp/brainstorm-branding-disable-telemetry';
     await withServer({ port, dir, env: { DISABLE_TELEMETRY: 'true' } }, async () => {
       writeFragment(dir);
       await sleep(300);
       const html = await fetchHtml(port);
       assertBrandedFallbackText(html);
-      assert(!html.includes(ASSET_URL), 'Claude Code telemetry opt-out should omit the remote image');
-    });
-  });
-
-  await test('CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 omits remote image for Claude Code traffic opt-out', async () => {
-    const port = 3456;
-    const dir = '/tmp/brainstorm-branding-claude-disable-nonessential';
-    await withServer({ port, dir, env: { CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1' } }, async () => {
-      const html = await fetchHtml(port);
-      assertBrandedFallbackText(html);
-      assert(!html.includes(ASSET_URL), 'Claude Code non-essential traffic opt-out should omit the remote image');
+      assert(!html.includes(ASSET_URL), 'generic telemetry opt-out should omit the remote image');
     });
   });
 
