@@ -136,7 +136,7 @@ def allowed(rel: str, path: Path, line: str) -> bool:
     if path in external_prompt_files and "claude --bare --print --no-session-persistence" in line:
         return True
 
-    if path in external_reviewer_host_skills and "local `claude` CLI" in line:
+    if path in external_reviewer_host_skills and "`claude`" in line:
         return True
     if path in external_reviewer_host_skills and "claude --bare --print --no-session-persistence" in line:
         return True

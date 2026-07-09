@@ -153,9 +153,79 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 
+## External Plan Challenge
+
+After plan self-review passes, challenge the written implementation plan with the local `claude` CLI before asking the user to review or execute the plan.
+
+This gate does not apply retroactively to the implementation plan that first creates `skills/writing-plans/plan-challenge-reviewer-prompt.md`. After that prompt exists, every future `writing-plans` invocation must run this gate unless the user explicitly waives it after a `claude` failure.
+
+1. **Check plan size.** Send the current plan content in full. If the plan exceeds 20,000 words as measured by `wc -w`, pause before invoking `claude` and ask the user whether to split the plan, proceed with an oversized review attempt, or choose another review path. Do not silently excerpt the plan being challenged.
+2. **Prepare a review packet** as an ephemeral Markdown file. Use this exact section structure:
+
+   ```markdown
+   # External Plan Challenge Packet
+
+   ## Plan File Path
+   [path]
+
+   ## Current Plan Content
+   [full plan content]
+
+   ## Source Spec File Path
+   [path]
+
+   ## Source Spec Content
+   [full spec content or documented excerpt]
+
+   ## Confirmed Planning Inputs
+   - Decision: [short decision summary]
+     Source: [source spec section, direct user statement, or explicit planning constraint]
+
+   ## Execution Assumption
+   subagent-driven | inline | both
+
+   ## Review Focus Areas
+   - spec coverage
+   - task decomposition
+   - dependency order
+   - TDD correctness
+   - exact file paths
+   - command validity
+   - expected output clarity
+   - placeholder content
+   - implementation risks
+   ```
+
+3. **Populate source spec content deliberately.** Use the full source spec by default. If the spec exceeds 20,000 words as measured by `wc -w`, include the goals, workflow, requirements, files, verification, and test-impact sections, then list omitted sections by heading.
+4. **Populate confirmed planning inputs only from confirmed sources.** Include decisions from the approved source spec, explicit user constraints stated during planning, and any execution mode the user selected before the plan challenge runs. Do not invent implied user decisions.
+5. **Set the execution assumption.** Use `both` unless the user explicitly chose or requested `subagent-driven` or `inline` before the plan challenge runs.
+6. **Resolve the reviewer prompt path.** Resolve `plan-challenge-reviewer-prompt.md` relative to this loaded `SKILL.md` file, store the absolute path in `reviewer_prompt`, and verify it is readable before running `claude`.
+7. **Run the challenge** with `exec_command`, invoking the local `claude` CLI in isolated, non-interactive mode from a neutral temp directory. Use this command shape:
+
+   ```bash
+   reviewer_prompt="/absolute/path/to/skills/writing-plans/plan-challenge-reviewer-prompt.md"
+   packet="/absolute/path/to/populated-plan-review-packet.md"
+   test -r "$reviewer_prompt" || { echo "Reviewer prompt unreadable: $reviewer_prompt" >&2; exit 1; }
+   test -s "$packet" || { echo "Review packet missing or empty: $packet" >&2; exit 1; }
+   cd /tmp && claude --bare --print --no-session-persistence --permission-mode plan --tools "" --output-format text \
+     --append-system-prompt "$(cat "$reviewer_prompt")" \
+     < "$packet"
+   ```
+
+   The `--tools ""` flag is intentional: the external reviewer should operate in isolated review-only mode and should not inspect or mutate the workspace.
+8. **Validate the output shape.** Treat the review as unusable if it is missing a `Status:` line, missing `Blocking Issues:`, `Challenges:`, `Advisory:`, or `Summary:` section headings, or has unstructured text that prevents identifying blocking issues, challenges, and advisory notes. Valid status values are `Approved` and `Issues Found`. `Approved` is inconsistent if either `Blocking Issues` or `Challenges` contains an item other than `None`. `Issues Found` is inconsistent if both `Blocking Issues` and `Challenges` are `None` or empty. Extra blank lines or Markdown heading markers do not matter if the required labels and section contents are identifiable.
+9. **Handle every substantive item before moving on:**
+   - Accept: revise the plan, rerun plan self-review, and rerun the external challenge if the accepted change materially alters the plan.
+   - Rebut: explain in the conversation why the plan stays unchanged.
+   - Escalate: ask the user when feedback exposes a product, scope, or execution decision the main session should not decide alone.
+10. **Treat advisory items as non-blocking.** Apply them opportunistically, mention them briefly, or ignore them when they do not affect plan readiness.
+11. **Use the material-change rule.** A plan change materially alters the plan when it changes task count, task boundaries, dependency order, target files, commands, expected test outcomes, acceptance criteria, or execution strategy. Minor wording edits, typo fixes, or clarifications that do not change what an implementer would do do not require a fresh external challenge.
+12. **Avoid silent infinite loops.** A rebutted item is considered handled and does not by itself require another external challenge. If accepted changes trigger two total external challenge reruns for the same plan and unresolved substantive issues remain, escalate to the user instead of continuing to revise and rerun indefinitely. Failed runs caused by missing `claude`, timeout, non-zero exit, or unusable output do not count toward this rerun limit.
+13. **Handle `claude` failures explicitly.** If `claude` is missing, times out, exits non-zero, or returns unusable output, pause and ask the user whether to retry, skip the external challenge, or choose another review path. If the user chooses to skip, explicitly record in the conversation that the external challenge was waived by the user. A waived challenge is waived, not passed.
+
 ## Execution Handoff
 
-After saving the plan, offer execution choice:
+After saving the plan, passing plan self-review, and passing the external plan challenge or recording a user-approved waiver, offer execution choice:
 
 **"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Two execution options:**
 
@@ -167,7 +237,7 @@ After saving the plan, offer execution choice:
 
 **If Subagent-Driven chosen:**
 - **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
-- Fresh subagent per task + two-stage review
+- Fresh subagent per task + task review
 
 **If Inline Execution chosen:**
 - **REQUIRED SUB-SKILL:** Use superpowers:executing-plans
