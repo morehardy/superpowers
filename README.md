@@ -7,18 +7,25 @@ The upstream project supports many agent harnesses. This fork intentionally keep
 ## What Is Kept
 
 - `.codex-plugin/plugin.json` - Codex plugin metadata.
+- `.agents/plugins/marketplace.json` - Local Codex marketplace entry for this development checkout.
 - `skills/` - Core workflow skills.
 - `skills/using-superpowers/references/codex-tools.md` - Codex tool mapping.
+- `scripts/package-codex-plugin.sh` - Portal archive packaging for the Codex plugin.
 - `assets/` - Plugin icon assets.
 - `tests/brainstorm-server/` - Tests for the visual brainstorming companion server.
+- `tests/codex/` - Codex-only contract tests for platform boundary, packaging, SDD, and worktree policy.
 
 ## What Was Removed
+
+The non-Codex platform entrypoints and tests are removed.
 
 - Claude Code, Cursor, Gemini, OpenCode, Copilot, and Droid entrypoints.
 - Cross-platform hook wrappers.
 - Non-Codex install docs and historical platform design docs.
 - Harness-specific test suites that require non-Codex CLIs.
 - The `writing-skills` meta-skill and Anthropic-oriented skill-writing references.
+
+Lowercase `claude` CLI references are an external reviewer backend, not Claude Code platform support.
 
 ## Basic Workflow
 
@@ -27,6 +34,9 @@ The upstream project supports many agent harnesses. This fork intentionally keep
 3. **using-git-worktrees** - Creates or verifies an isolated workspace when needed.
 4. **writing-plans** - Produces detailed implementation plans with exact files, commands, and verification.
 5. **subagent-driven-development** or **executing-plans** - Implements the plan.
+   - SDD task review uses one reviewer for both spec-compliance and task-quality verdicts.
+   - SDD uses one task reviewer that returns both spec-compliance and task-quality verdicts, plus a final whole-branch review.
+   - SDD handoff artifacts live under `.superpowers/sdd`.
 6. **test-driven-development** - Enforces red/green/refactor for feature work and bug fixes.
 7. **requesting-code-review** and **receiving-code-review** - Review and respond to feedback.
 8. **verification-before-completion** and **finishing-a-development-branch** - Prove the work is complete and decide how to finish.
@@ -48,7 +58,18 @@ See `skills/using-superpowers/references/codex-tools.md` for details.
 
 ## Testing
 
-The remaining automated test suite covers the visual brainstorming companion:
+Run the Codex contract tests:
+
+```bash
+bash tests/codex/test-platform-boundary.sh
+bash tests/codex/test-sdd-integration-script-behavior.sh
+bash tests/codex/test-sdd-workspace.sh
+bash tests/codex/test-worktree-path-policy.sh
+bash tests/codex/test-marketplace-manifest.sh
+bash tests/codex/test-package-codex-plugin.sh
+```
+
+Run the visual brainstorming companion tests:
 
 ```bash
 cd tests/brainstorm-server
@@ -75,6 +96,16 @@ The wrapper behavior has a fast fake-Codex test:
 ```bash
 bash tests/codex/test-sdd-integration-script-behavior.sh
 ```
+
+## Packaging
+
+Build a portal upload archive with an explicit metadata source:
+
+```bash
+scripts/package-codex-plugin.sh --metadata-source PATH --output superpowers.zip
+```
+
+`--metadata-source PATH` must be a directory containing `skills/<skill>/agents/openai.yaml` for every packaged skill. The archive includes only `.codex-plugin/`, `README.md`, `LICENSE`, `assets/`, and `skills/`.
 
 ## Installation
 

@@ -18,13 +18,17 @@ root. This audit may inspect the repository.
 
 Expect a Markdown packet with these sections:
 
-- Repository root
-- Git range
-- Implementation plan
-- Source spec
-- Latest test evidence
-- Implementation goal
-- Review focus areas
+- Repository Root
+- Git Range
+- Implementation Plan
+- Source Spec
+- Latest Test Evidence
+- Implementation Goal
+- Review Focus Areas
+
+If the local reviewer backend times out, exits non-zero, or returns unusable
+output, the main session handles retry, skip, or an alternative review path. A
+user-approved skip is waived, not passed.
 
 The packet identifies the review scope. You may inspect files, diffs, and git
 metadata inside the repository to verify the implementation. Do not rely only on

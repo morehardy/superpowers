@@ -14,8 +14,8 @@ This is a personal Codex-focused fork of Superpowers.
 
 ## Working Rules
 
+- SDD uses one task reviewer that returns both spec-compliance and task-quality verdicts, plus a final whole-branch review.
 - Keep skills general-purpose and useful across coding projects.
 - Avoid adding third-party runtime dependencies unless they are already required by a kept test fixture.
 - When changing skill behavior, verify the affected flow with a realistic Codex session when possible.
 - Keep this fork lean: remove platform compatibility files as soon as they stop serving Codex.
-

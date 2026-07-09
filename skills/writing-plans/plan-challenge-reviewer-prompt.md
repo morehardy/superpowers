@@ -16,13 +16,17 @@ self-review has passed.
 
 Expect a Markdown packet with these sections:
 
-- Plan file path
-- Current plan content
-- Source spec file path
-- Source spec content
-- Confirmed planning inputs
-- Execution assumption: `subagent-driven`, `inline`, or `both`
-- Review focus areas
+- Plan File Path
+- Current Plan Content
+- Source Spec File Path
+- Source Spec Content
+- Confirmed Planning Inputs
+- Execution Assumption: `subagent-driven`, `inline`, or `both`
+- Review Focus Areas
+
+If the local reviewer backend times out, exits non-zero, or returns unusable
+output, the main session handles retry, skip, or an alternative review path. A
+user-approved skip is waived, not passed.
 
 The reviewer has no tool access and cannot inspect the workspace. Review the
 text in the packet only. Do not claim that files exist or commands pass; instead

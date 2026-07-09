@@ -12,12 +12,16 @@ Use this template when running the local `claude` CLI to challenge a written bra
 
 Before invoking `claude`, prepare a packet with these fields:
 
-- Spec file path
-- Current spec content
-- User-confirmed key decisions
+- Spec File Path
+- Current Spec Content
+- User-Confirmed key decisions
 - Approaches considered and not selected, with reasons
-- Design success criteria
-- Review focus areas: scope, ambiguity, over-engineering, missing error handling, and risks for later implementation planning
+- Design Success Criteria
+- Review Focus Areas: scope, ambiguity, over-engineering, missing error handling, and risks for later implementation planning
+
+If the local reviewer backend times out, exits non-zero, or returns unusable
+output, the main session handles retry, skip, or an alternative review path. A
+user-approved skip is waived, not passed.
 
 ## Reviewer Role
 
