@@ -64,7 +64,7 @@ without repeating it.
 scripts/start-server.sh --project-dir /path/to/project --open
 ```
 
-Use `exec_command` for launch. Do not add SessionStart hooks, plugin auto-launchers, or other platform launchers for this fork.
+Use `exec_command` for launch. Do not add startup hooks, automatic plugin launchers, or other platform launchers for this fork.
 
 If the URL is unreachable from your browser (common in remote/containerized setups), bind a non-loopback host:
 

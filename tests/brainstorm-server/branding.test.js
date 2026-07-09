@@ -11,7 +11,7 @@ const assert = require('assert');
 const REPO_ROOT = path.join(__dirname, '../..');
 const SERVER_PATH = path.join(REPO_ROOT, 'skills/brainstorming/scripts/server.cjs');
 const PACKAGE_VERSION = JSON.parse(
-  fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf-8')
+  fs.readFileSync(path.join(REPO_ROOT, '.codex-plugin/plugin.json'), 'utf-8')
 ).version;
 const TOKEN = 'testtoken-branding-0123456789abcdef';
 const ASSET_URL = 'https://primeradiant.com/brand/superpowers-visual-brainstorming-logo.png';

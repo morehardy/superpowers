@@ -94,6 +94,12 @@ external_prompt_files = {
     repo / "skills" / "finishing-a-development-branch" / "implementation-audit-reviewer-prompt.md",
 }
 
+external_reviewer_host_skills = {
+    repo / "skills" / "brainstorming" / "SKILL.md",
+    repo / "skills" / "writing-plans" / "SKILL.md",
+    repo / "skills" / "finishing-a-development-branch" / "SKILL.md",
+}
+
 explicit_removed_lines = {
     "AGENTS.md": [
         "- Do not maintain Claude Code, Cursor, Gemini, OpenCode, Copilot, or Droid plugin entrypoints.",
@@ -128,6 +134,11 @@ def allowed(rel: str, path: Path, line: str) -> bool:
     if path in external_prompt_files and "invoking `claude`" in line:
         return True
     if path in external_prompt_files and "claude --bare --print --no-session-persistence" in line:
+        return True
+
+    if path in external_reviewer_host_skills and "local `claude` CLI" in line:
+        return True
+    if path in external_reviewer_host_skills and "claude --bare --print --no-session-persistence" in line:
         return True
 
     if line in explicit_removed_lines.get(rel, []):

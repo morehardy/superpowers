@@ -28,8 +28,9 @@ You MUST create a task for each of these items and complete them in order:
 5. **Present design** — in sections scaled to their complexity, get user approval after each section
 6. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
 7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
-8. **User reviews written spec** — ask user to review the spec file before proceeding
-9. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+8. **External design challenge** — run local external review before user review
+9. **User reviews written spec** — ask user to review the spec file before proceeding
+10. **Transition to implementation** — invoke writing-plans skill to create implementation plan
 
 ## Process Flow
 
@@ -42,6 +43,7 @@ digraph brainstorming {
     "User approves design?" [shape=diamond];
     "Write design doc" [shape=box];
     "Spec self-review\n(fix inline)" [shape=box];
+    "External design challenge" [shape=box];
     "User reviews spec?" [shape=diamond];
     "Invoke writing-plans skill" [shape=doublecircle];
 
@@ -52,7 +54,9 @@ digraph brainstorming {
     "User approves design?" -> "Present design sections" [label="no, revise"];
     "User approves design?" -> "Write design doc" [label="yes"];
     "Write design doc" -> "Spec self-review\n(fix inline)";
-    "Spec self-review\n(fix inline)" -> "User reviews spec?";
+    "Spec self-review\n(fix inline)" -> "External design challenge";
+    "External design challenge" -> "Spec self-review\n(fix inline)" [label="accepted changes"];
+    "External design challenge" -> "User reviews spec?" [label="approved or rebutted"];
     "User reviews spec?" -> "Write design doc" [label="changes requested"];
     "User reviews spec?" -> "Invoke writing-plans skill" [label="approved"];
 }
@@ -117,6 +121,28 @@ After writing the spec document, look at it with fresh eyes:
 4. **Ambiguity check:** Could any requirement be interpreted two different ways? If so, pick one and make it explicit.
 
 Fix any issues inline. No need to re-review — just fix and move on.
+
+**External Design Challenge:**
+After the spec self-review passes and before user review, run a local external design challenge using `skills/brainstorming/design-challenge-reviewer-prompt.md`.
+
+Prepare a review packet containing:
+
+- Spec File Path
+- Current Spec Content
+- User-Confirmed key decisions
+- Approaches considered and not selected, with reasons
+- Design Success Criteria
+- Review Focus Areas
+
+Run the local `claude` CLI as an external reviewer backend:
+
+```bash
+claude --bare --print --no-session-persistence --permission-mode plan --tools "" --output-format text
+```
+
+If the reviewer finds blocking issues or challenges you accept, revise the spec, rerun spec self-review, rerun the external challenge if the design materially changed, and commit the revised spec before user review. If you rebut a challenge, explain why the spec remains unchanged before proceeding.
+
+If the reviewer times out, exits non-zero, or returns unusable output, retry once. If it still fails, ask the user whether to skip the challenge or use an alternative review path. A skipped challenge is waived, not passed.
 
 **User Review Gate:**
 After the spec review loop passes, ask the user to review the written spec before proceeding:
