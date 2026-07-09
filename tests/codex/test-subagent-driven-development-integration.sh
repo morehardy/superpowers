@@ -140,7 +140,7 @@ cat > package.json <<'JSON'
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node test/math.test.js"
   }
 }
 JSON
@@ -156,7 +156,7 @@ cat > docs/superpowers/plans/implementation-plan.md <<'PLAN'
 
 **Architecture:** Keep all exports in `src/math.js`. Tests live in `test/math.test.js` and use Node's built-in test runner.
 
-**Tech Stack:** Node.js ESM, `node:test`, `assert/strict`.
+**Tech Stack:** Node.js ESM, `assert/strict`.
 
 ---
 
@@ -169,15 +169,13 @@ cat > docs/superpowers/plans/implementation-plan.md <<'PLAN'
 - [ ] **Step 1: Write the failing add tests**
 
 ```javascript
-import test from 'node:test';
 import assert from 'node:assert/strict';
 import { add } from '../src/math.js';
 
-test('add returns the sum of two numbers', () => {
-  assert.equal(add(2, 3), 5);
-  assert.equal(add(0, 0), 0);
-  assert.equal(add(-1, 1), 0);
-});
+assert.equal(add(2, 3), 5);
+assert.equal(add(0, 0), 0);
+assert.equal(add(-1, 1), 0);
+console.log('math tests passed');
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -218,11 +216,9 @@ Add this to `test/math.test.js`:
 ```javascript
 import { multiply } from '../src/math.js';
 
-test('multiply returns the product of two numbers', () => {
-  assert.equal(multiply(2, 3), 6);
-  assert.equal(multiply(0, 5), 0);
-  assert.equal(multiply(-2, 3), -6);
-});
+assert.equal(multiply(2, 3), 6);
+assert.equal(multiply(0, 5), 0);
+assert.equal(multiply(-2, 3), -6);
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -272,6 +268,8 @@ Follow the plan exactly. Do not add extra math functions. Run the specified test
 At the end, print a block starting with CODEX_SDD_INTEGRATION_SUMMARY and include:
 - skill used
 - whether subagents were dispatched
+- whether the task reviewer was used
+- whether .superpowers/sdd was used for handoff artifacts
 - whether tests pass
 - final commit count"
 
@@ -328,11 +326,11 @@ fi
 if [[ ! -f "$TEST_PROJECT/test/math.test.js" ]]; then
   check_fail "fixture tests pass"
 elif npm test > "$TEST_PROJECT/final-test-output.txt" 2>&1; then
-  if grep -Eq '^# tests [1-9][0-9]*$' "$TEST_PROJECT/final-test-output.txt"; then
+  if grep -q 'math tests passed' "$TEST_PROJECT/final-test-output.txt"; then
     check_pass "fixture tests pass"
   else
     check_fail "fixture tests pass"
-    echo "No tests were executed:"
+    echo "Test marker was not printed:"
     cat "$TEST_PROJECT/final-test-output.txt"
   fi
 else
@@ -357,6 +355,24 @@ if grep -qi "subagent" "$OUTPUT_FILE"; then
   check_pass "output mentions subagent workflow"
 else
   check_fail "output mentions subagent workflow"
+fi
+
+if grep -qi "task reviewer" "$OUTPUT_FILE"; then
+  check_pass "output mentions task reviewer"
+else
+  check_fail "output mentions task reviewer"
+fi
+
+if grep -q ".superpowers/sdd" "$OUTPUT_FILE"; then
+  check_pass "output mentions .superpowers/sdd workspace"
+else
+  check_fail "output mentions .superpowers/sdd workspace"
+fi
+
+if grep -qi "tests pass: yes" "$OUTPUT_FILE"; then
+  check_pass "output reports tests pass: yes"
+else
+  check_fail "output reports tests pass: yes"
 fi
 
 if grep -q "export function divide\|export function power\|export function subtract" "$TEST_PROJECT/src/math.js" 2>/dev/null; then

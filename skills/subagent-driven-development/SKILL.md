@@ -57,15 +57,15 @@ digraph process {
         "Write diff file, dispatch task reviewer subagent (./task-reviewer-prompt.md)" [shape=box];
         "Task reviewer reports spec ✅ and quality approved?" [shape=diamond];
         "Dispatch fix subagent for Critical/Important findings" [shape=box];
-        "Mark task complete in todo list and progress ledger" [shape=box];
+        "Mark task complete in update_plan and progress ledger" [shape=box];
     }
 
-    "Read plan, note context and global constraints, create todos" [shape=box];
+    "Read plan, note context and global constraints, create update_plan checklist" [shape=box];
     "More tasks remain?" [shape=diamond];
     "Dispatch final code reviewer subagent (../requesting-code-review/code-reviewer.md)" [shape=box];
     "Use superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
-    "Read plan, note context and global constraints, create todos" -> "Dispatch implementer subagent (./implementer-prompt.md)";
+    "Read plan, note context and global constraints, create update_plan checklist" -> "Dispatch implementer subagent (./implementer-prompt.md)";
     "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
     "Implementer subagent asks questions?" -> "Answer questions, provide context" [label="yes"];
     "Answer questions, provide context" -> "Dispatch implementer subagent (./implementer-prompt.md)";
@@ -74,8 +74,8 @@ digraph process {
     "Write diff file, dispatch task reviewer subagent (./task-reviewer-prompt.md)" -> "Task reviewer reports spec ✅ and quality approved?";
     "Task reviewer reports spec ✅ and quality approved?" -> "Dispatch fix subagent for Critical/Important findings" [label="no"];
     "Dispatch fix subagent for Critical/Important findings" -> "Write diff file, dispatch task reviewer subagent (./task-reviewer-prompt.md)" [label="re-review"];
-    "Task reviewer reports spec ✅ and quality approved?" -> "Mark task complete in todo list and progress ledger" [label="yes"];
-    "Mark task complete in todo list and progress ledger" -> "More tasks remain?";
+    "Task reviewer reports spec ✅ and quality approved?" -> "Mark task complete in update_plan and progress ledger" [label="yes"];
+    "Mark task complete in update_plan and progress ledger" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
     "More tasks remain?" -> "Dispatch final code reviewer subagent (../requesting-code-review/code-reviewer.md)" [label="no"];
     "Dispatch final code reviewer subagent (../requesting-code-review/code-reviewer.md)" -> "Use superpowers:finishing-a-development-branch";
@@ -100,6 +100,10 @@ conflicts that only emerge from implementation.
 
 Use the least powerful model that can handle each role to conserve cost and increase speed.
 
+Codex dispatch uses `spawn_agent`, result collection uses `wait_agent`, and every finished subagent must be closed with `close_agent`. Track task state with `update_plan`. Use `exec_command` for shell commands and `apply_patch` for manual file edits.
+
+When Codex `spawn_agent` exposes model selection, use `gpt-5.4` for implementer and fixer subagents, and use `gpt-5.5` for task reviewers and the final whole-branch reviewer. If model selection is unavailable, record `Codex spawn_agent model selection unavailable` and omit the model override. If tool metadata exposes model selection but `gpt-5.4` or `gpt-5.5` is absent, pause and ask the user for replacement model names before dispatching.
+
 **Mechanical implementation tasks** (isolated functions, clear specs, 1-2 files): use a fast, cheap model. Most implementation tasks are mechanical when the plan is well-specified.
 
 **Integration and judgment tasks** (multi-file coordination, pattern matching, debugging): use a standard model.
@@ -112,9 +116,9 @@ capable available model, not the session default.
 diff's size, complexity, and risk. A small mechanical diff does not need the
 most capable model; a subtle concurrency change does.
 
-**Always specify the model explicitly when dispatching a subagent.** An
-omitted model inherits your session's model — often the most capable and
-most expensive — which silently defeats this section.
+Specify the model explicitly when model selection is available. An omitted
+model inherits your session's model, which is only acceptable when Codex
+spawn_agent model selection is unavailable.
 
 **Turn count beats token price.** Wall-clock and context cost scale with how
 many turns a subagent takes, and the cheapest models routinely take 2-3× the
@@ -180,9 +184,9 @@ final whole-branch review. When you fill a reviewer template:
   project's spec demands.
 - Hand the reviewer its diff as a file: run this skill's
   `scripts/review-package BASE HEAD` and pass the reviewer the file path
-  it prints (or, without bash: `git log --oneline`, `git diff --stat`,
-  and `git diff -U10` for the range, redirected to one uniquely named
-  file). The output never enters your own context, and the reviewer sees
+  it prints (or use `exec_command` to run `git log --oneline`,
+  `git diff --stat`, and `git diff -U10` for the range, writing them to one
+  uniquely named file). The output never enters your own context, and the reviewer sees
   the commit list, stat summary, and full diff with context in one Read
   call. Use the BASE you recorded before dispatching the implementer —
   never `HEAD~1`, which silently truncates multi-commit tasks.
@@ -248,7 +252,7 @@ and is re-read on every later turn. Hand artifacts over as files:
 Conversation memory does not survive compaction. In real sessions,
 controllers that lost their place have re-dispatched entire completed task
 sequences — the single most expensive failure observed. Track progress in
-a ledger file, not only in todos.
+a ledger file, not only in `update_plan`.
 
 - At skill start, check for a ledger:
   `cat "$(git rev-parse --show-toplevel)/.superpowers/sdd/progress.md"`. Tasks listed there
@@ -275,7 +279,7 @@ a ledger file, not only in todos.
 You: I'm using Subagent-Driven Development to execute this plan.
 
 [Read plan file once: docs/superpowers/plans/feature-plan.md]
-[Create todos for all tasks]
+[Create an update_plan checklist for all tasks]
 
 Task 1: Hook installation script
 

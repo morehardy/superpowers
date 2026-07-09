@@ -41,6 +41,9 @@ Subagent (general-purpose):
 
     Work from: [directory]
 
+    Use Codex-native tools while working: `exec_command` for shell commands
+    and `apply_patch` for manual file edits.
+
     **While you work:** If you encounter something unexpected or unclear, **ask questions**.
     It's always OK to pause and clarify. Don't guess or make assumptions.
 

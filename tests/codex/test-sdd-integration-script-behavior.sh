@@ -108,15 +108,13 @@ export function add(a, b) {
 JS
 
 cat > test/math.test.js <<'JS'
-import test from 'node:test';
 import assert from 'node:assert/strict';
 import { add } from '../src/math.js';
 
-test('add returns the sum of two numbers', () => {
-  assert.equal(add(2, 3), 5);
-  assert.equal(add(0, 0), 0);
-  assert.equal(add(-1, 1), 0);
-});
+assert.equal(add(2, 3), 5);
+assert.equal(add(0, 0), 0);
+assert.equal(add(-1, 1), 0);
+console.log('math tests passed');
 JS
 
 git add src/math.js test/math.test.js
@@ -133,21 +131,16 @@ export function multiply(a, b) {
 JS
 
 cat > test/math.test.js <<'JS'
-import test from 'node:test';
 import assert from 'node:assert/strict';
 import { add, multiply } from '../src/math.js';
 
-test('add returns the sum of two numbers', () => {
-  assert.equal(add(2, 3), 5);
-  assert.equal(add(0, 0), 0);
-  assert.equal(add(-1, 1), 0);
-});
-
-test('multiply returns the product of two numbers', () => {
-  assert.equal(multiply(2, 3), 6);
-  assert.equal(multiply(0, 5), 0);
-  assert.equal(multiply(-2, 3), -6);
-});
+assert.equal(add(2, 3), 5);
+assert.equal(add(0, 0), 0);
+assert.equal(add(-1, 1), 0);
+assert.equal(multiply(2, 3), 6);
+assert.equal(multiply(0, 5), 0);
+assert.equal(multiply(-2, 3), -6);
+console.log('math tests passed');
 JS
 
 git add src/math.js test/math.test.js
@@ -157,6 +150,8 @@ cat <<'SUMMARY'
 CODEX_SDD_INTEGRATION_SUMMARY
 skill used: fake subagent-driven-development
 subagents dispatched: yes
+task reviewer: yes
+workspace: .superpowers/sdd
 tests pass: yes
 final commit count: 2
 SUMMARY
@@ -188,6 +183,8 @@ cat <<'SUMMARY'
 CODEX_SDD_INTEGRATION_SUMMARY
 skill used: fake subagent-driven-development
 subagents dispatched: yes
+task reviewer: no
+workspace: .superpowers/sdd
 tests pass: no
 final commit count: 0
 SUMMARY
@@ -205,6 +202,10 @@ make_success_fake_codex "$success_fake"
 
 if RUN_CODEX_INTEGRATION=1 CODEX_BIN="$success_fake" CODEX_TIMEOUT_SECONDS=30 bash "$TARGET_SCRIPT" >"$success_output" 2>&1; then
   assert_contains "$success_output" "STATUS: PASSED" "successful fake Codex run passes"
+  assert_contains "$success_output" "subagent-driven-development" "successful fake output records SDD skill"
+  assert_contains "$success_output" "task reviewer" "successful fake output records task reviewer"
+  assert_contains "$success_output" ".superpowers/sdd" "successful fake output records SDD workspace"
+  assert_contains "$success_output" "tests pass: yes" "successful fake output records passing tests"
 else
   fail "successful fake Codex run passes"
   sed -n '1,260p' "$success_output"
