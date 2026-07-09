@@ -9,7 +9,7 @@ description: Use when implementation is complete, all tests pass, and you need t
 
 Guide completion of development work by presenting clear options and handling chosen workflow.
 
-**Core principle:** Verify tests → Detect environment → Present options → Execute choice → Clean up.
+**Core principle:** Verify tests → External Implementation Audit → Detect environment → Present options → Execute choice → Clean up.
 
 **Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
 
@@ -37,7 +37,80 @@ Stop. Don't proceed to Step 2.
 
 **If tests pass:** Continue to Step 2.
 
-### Step 2: Detect Environment
+### Step 2: External Implementation Audit
+
+**Before presenting options, audit the completed implementation with the local `claude` CLI.** This gate runs after local tests pass and before environment detection or the finishing menu.
+
+This audit covers the final repository state against the implementation plan, source spec when available, and latest test evidence. It is a final readiness gate; it does not replace local tests or per-task reviews.
+
+1. **Identify the audit scope.**
+   - Use the implementation plan path from the current execution context.
+   - Use the source spec path from the plan or session context when it is known.
+   - Determine the implementation range with `git rev-parse` or the base/head range already used for code review.
+   - If the implementation plan cannot be identified, ask the user for the plan path before invoking `claude`. If the user confirms there was no plan, write `Not identified` for the plan and focus the audit on the available requirements, diff, and test evidence.
+2. **Prepare an audit packet** as an ephemeral Markdown file. Use this exact section structure:
+
+   ```markdown
+   # External Implementation Audit Packet
+
+   ## Repository Root
+   [absolute path]
+
+   ## Git Range
+   Base: [sha]
+   Head: [sha]
+
+   ## Implementation Plan
+   [path or "Not identified"]
+
+   ## Source Spec
+   [path or "Not identified"]
+
+   ## Latest Test Evidence
+   Command: [command]
+   Result: [short passing summary]
+
+   ## Implementation Goal
+   [short goal]
+
+   ## Review Focus Areas
+   - plan and spec alignment
+   - missing requirements
+   - unintended scope
+   - regression risk
+   - test coverage and evidence
+   - code quality issues that materially affect readiness
+   - repository mutation check
+   ```
+
+3. **Resolve the reviewer prompt path.** Resolve `implementation-audit-reviewer-prompt.md` relative to this loaded `SKILL.md` file, store the absolute path in `reviewer_prompt`, and verify it is readable before running `claude`.
+4. **Run the audit** with `exec_command`, invoking the local `claude` CLI in non-interactive mode from the repository root. Use this command shape:
+
+   ```bash
+   reviewer_prompt="/absolute/path/to/skills/finishing-a-development-branch/implementation-audit-reviewer-prompt.md"
+   packet="/absolute/path/to/populated-implementation-audit-packet.md"
+   repo_root="/absolute/path/to/repo"
+   test -r "$reviewer_prompt" || { echo "Reviewer prompt unreadable: $reviewer_prompt" >&2; exit 1; }
+   test -s "$packet" || { echo "Audit packet missing or empty: $packet" >&2; exit 1; }
+   cd "$repo_root" && claude --bare --print --no-session-persistence --permission-mode plan --output-format text \
+     --append-system-prompt "$(cat "$reviewer_prompt")" \
+     < "$packet"
+   ```
+
+   Do not pass `--tools ""` for this audit. The external reviewer should be able to inspect the repository. The reviewer prompt requires read-only behavior and forbids edits, staging, commits, pushes, branch changes, dependency installation, and generated-artifact rewrites.
+5. **Validate the output shape.** Treat the audit as unusable if it is missing a `Status:` line, missing `Critical:`, `Important:`, `Minor:`, `Advisory:`, `Plan Alignment:`, `Test Evidence:`, or `Summary:` section headings, or has unstructured text that prevents identifying findings by severity. Valid status values are `Approved` and `Issues Found`. `Approved` is inconsistent if either `Critical` or `Important` contains an item other than `None`. `Issues Found` is inconsistent if all issue sections are `None` or empty. Extra blank lines or Markdown heading markers do not matter if the required labels and section contents are identifiable.
+6. **Handle Critical and Important findings before moving on.**
+   - Accept: fix the implementation, rerun relevant tests, and rerun the external implementation audit.
+   - Rebut: explain with concrete code, diff, or test evidence why the finding does not require a change.
+   - Escalate: ask the user when feedback exposes a product, scope, or plan interpretation decision the main session should not decide alone.
+7. **Treat Minor and Advisory findings as non-blocking.** Apply them opportunistically, mention them briefly, or ignore them when they do not affect readiness.
+8. **Avoid silent infinite loops.** A rebutted item is considered handled and does not by itself require another external audit. If accepted changes trigger two total external audit reruns for the same implementation and unresolved Critical or Important findings remain, escalate to the user instead of continuing to revise and rerun indefinitely. Failed runs caused by missing `claude`, timeout, non-zero exit, or unusable output do not count toward this rerun limit.
+9. **Handle `claude` failures explicitly.** If `claude` is missing, times out, exits non-zero, or returns unusable output, pause and ask the user whether to retry, skip the external implementation audit, or choose another review path. If the user chooses to skip, explicitly record in the conversation that the external implementation audit was waived by the user. A waived audit is waived, not passed.
+10. **Check for unexpected mutation if needed.** If the audit output or command behavior suggests the reviewer may have changed files, run `git status --short` and inspect any changes before continuing. Never revert user changes without explicit permission.
+
+**If the audit passes or the user explicitly waives it:** Continue to Step 3.
+
+### Step 3: Detect Environment
 
 **Determine workspace state before presenting options:**
 
@@ -54,7 +127,7 @@ This determines which menu to show and how cleanup works:
 | `GIT_DIR != GIT_COMMON`, named branch | Standard 4 options | Provenance-based (see Step 6) |
 | `GIT_DIR != GIT_COMMON`, detached HEAD | Reduced 3 options (no merge) | No cleanup (externally managed) |
 
-### Step 3: Determine Base Branch
+### Step 4: Determine Base Branch
 
 ```bash
 # Try common base branches
@@ -63,7 +136,7 @@ git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
 
 Or ask: "This branch split from main - is that correct?"
 
-### Step 4: Present Options
+### Step 5: Present Options
 
 **Normal repo and named-branch worktree — present exactly these 4 options:**
 
@@ -92,7 +165,7 @@ Which option?
 
 **Don't add explanation** - keep options concise.
 
-### Step 5: Execute Choice
+### Step 6: Execute Choice
 
 #### Option 1: Merge Locally
 
@@ -158,7 +231,7 @@ Then: Cleanup worktree (Step 6), then force-delete branch:
 git branch -D <feature-branch>
 ```
 
-### Step 6: Cleanup Workspace
+### Step 7: Cleanup Workspace
 
 **Only runs for Options 1 and 4.** Options 2 and 3 always preserve the worktree.
 
